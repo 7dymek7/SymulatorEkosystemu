@@ -6,15 +6,22 @@
 
 class Srodowisko {
 private:
+    int szerokosc;
+    int wysokosc;
     std::vector<Organizm> organizmy;
 
 public:
     Srodowisko();
+    Srodowisko(int szer, int wys);
 
-    // Podstawowe operacje na obiektach (wymóg na 3.0)
     void dodajOrganizm(Organizm org);
     void usunOrganizm(int indeks);
-    void wyswietlStan();
+    int znajdzOrganizm(int x, int y);
+    bool modyfikujEnergie(int x, int y, int nowaEnergia);
+
+    void wykonajTure();
+    void rysujPlansze();
+    void wypiszSzczegoly(int indeks);
 };
 
 #endif

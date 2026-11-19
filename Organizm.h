@@ -16,9 +16,12 @@ public:
     char getSymbol();
     int getEnergia();
     Pozycja getPozycja();
-    
+
     void setEnergia(int nowaEnergia);
     void setPozycja(Pozycja nowaPozycja);
+
+    void zmienEnergie(int delta);
+    bool czyZywy();
 };
 
 #endif
