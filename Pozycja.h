@@ -7,11 +7,11 @@ private:
     int y;
 
 public:
-    Pozycja(); // Konstruktor domyślny
-    Pozycja(int startX, int startY); // Konstruktor parametryczny
+    Pozycja();
+    Pozycja(int startX, int startY);
 
-    int getX();
-    int getY();
+    int getX() const;
+    int getY() const;
     void setX(int noweX);
     void setY(int noweY);
 };

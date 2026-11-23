@@ -1,6 +1,7 @@
 #ifndef ORGANIZM_H
 #define ORGANIZM_H
 
+#include <string>
 #include "Pozycja.h"
 
 class Organizm {
@@ -12,16 +13,21 @@ private:
 public:
     Organizm();
     Organizm(char sym, int startEnergia, Pozycja startPozycja);
+    virtual ~Organizm() = default;
 
-    char getSymbol();
-    int getEnergia();
-    Pozycja getPozycja();
+    char getSymbol() const;
+    int getEnergia() const;
+    Pozycja getPozycja() const;
+    bool czyZywy() const;
 
     void setEnergia(int nowaEnergia);
     void setPozycja(Pozycja nowaPozycja);
-
     void zmienEnergie(int delta);
-    bool czyZywy();
+
+    // Metody wirtualne realizujace polimorfizm (ocena 4.0)
+    virtual void wykonajAkcje(int szerokosc, int wysokosc, bool burzaPylowa) = 0;
+    virtual std::string getTyp() const = 0;
+    virtual std::string getKolorANSI() const = 0;
 };
 
 #endif
