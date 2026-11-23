@@ -35,7 +35,10 @@ void inicjalizujKonsole() {
 #endif
 }
 
-int wczytajLiczbe() {
+int wczytajLiczbe(const string& podpowiedz = "") {
+    if (!podpowiedz.empty()) {
+        cout << podpowiedz;
+    }
     int wartosc;
     if (!(cin >> wartosc)) {
         cin.clear();
@@ -45,16 +48,47 @@ int wczytajLiczbe() {
     return wartosc;
 }
 
+void poczekajNaEnter(bool wyczyscBufor = true) {
+    cout << "\n\033[1;96mNacisnij [Enter], aby kontynuowac...\033[0m";
+    if (wyczyscBufor) {
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    cin.get();
+}
+
+void pokazBriefing(bool zMenu) {
+    cout << "\033[2J\033[H";
+    cout << "\033[1;38;5;208m";
+    cout << "╔════════════════════════════════════════════════════════════════════════════╗\n";
+    cout << "║             MISJA MARS: SYMULATOR EKOSYSTEMU KRATERU JEZERO                ║\n";
+    cout << "╚════════════════════════════════════════════════════════════════════════════╝\033[0m\n\n";
+
+    cout << "\033[1;96mZASADY SYMULACJI:\033[0m\n"
+         << "  \033[1;92m*\033[0m \033[1mPorost Marsjanski\033[0m   - pozostaje w miejscu, laduje energie ze slonca\n"
+         << "                          i rozrasta sie na sasiednie pola (energia >= 14).\n"
+         << "  \033[1;93mX\033[0m \033[1mDrapieznik\033[0m          - przemieszcza sie po mapie, traci energie na ruch\n"
+         << "                          i pochlania Porost, gdy wejdzie na jego pole.\n"
+         << "  \033[1;91m~\033[0m \033[1mBurza pylowa\033[0m        - pojawia sie losowo; ogranicza fotosynteze porostow\n"
+         << "                          i zwieksza zuzycie energii przez drapiezniki.\n"
+         << "  \033[48;5;24m\033[1;97m L \033[0m \033[1mLider sektora\033[0m     - niebieskie podswietlenie wskazuje najsilniejszy\n"
+         << "                          organizm na mapie (porownanie operatorem <).\n\n";
+
+    cout << "\033[1;96mWSKAZOWKI:\033[0m\n"
+         << "  - Uzyj opcji [2], aby obejrzec plynna animacje wielu dni marsjanskich (Soli).\n"
+         << "  - Uzyj opcji [8], aby podejrzec tabele wszystkich organizmow i ich wspolrzedne.\n"
+         << "  - Bledne wspolrzedne lub wartosci sa bezpiecznie obslugiwane przez wyjatki.\n";
+
+    poczekajNaEnter(zMenu);
+}
+
 int main() {
     inicjalizujKonsole();
     srand(static_cast<unsigned int>(time(nullptr)));
 
     Srodowisko mars(12, 8);
-    mars.dodajOrganizm(make_unique<PorostMarsjanski>(10, Pozycja(2, 2), 2));
-    mars.dodajOrganizm(make_unique<PorostMarsjanski>(9, Pozycja(9, 5), 2));
-    mars.dodajOrganizm(make_unique<PorostMarsjanski>(8, Pozycja(5, 6), 3));
-    mars.dodajOrganizm(make_unique<DrapieznikMarsjanski>(18, Pozycja(3, 3), 1));
-    mars.dodajOrganizm(make_unique<DrapieznikMarsjanski>(20, Pozycja(8, 2), 2));
+    mars.inicjalizujDomyslnyEkosystem();
+
+    pokazBriefing(false);
 
     string komunikat = "Misja terraformacji Marsa rozpoczeta.";
     int wybor = -1;
@@ -63,62 +97,60 @@ int main() {
         mars.rysujPlansze(komunikat);
         komunikat.clear();
 
-        cout << "\n\033[1;38;5;208m--- PANEL KONTROLNY ---\033[0m\n"
-             << "1. Nastepny Sol (1 tura)\n"
-             << "2. Animacja automatyczna (5 Soli)\n"
-             << "3. Dodaj Porost Marsjanski (*)\n"
-             << "4. Dodaj Drapieznika Marsjanskiego (X)\n"
-             << "5. Skanuj pole (x, y)\n"
-             << "6. Modyfikuj energie organizmu\n"
-             << "7. Usun organizm z pola (x, y)\n"
-             << "0. Zakoncz misje\n"
-             << "Wybor: ";
+        cout << "\n\033[1;38;5;208m─── PANEL KONTROLNY ──────────────────────────────────────────────────────────\033[0m\n"
+             << "  1. Nastepny Sol (1 tura)           6. Modyfikuj energie organizmu\n"
+             << "  2. Animacja (wybrana liczba Soli)  7. Usun organizm z pola (x, y)\n"
+             << "  3. Dodaj Porost Marsjanski (*)     8. Raport sektora (tabela organizmow)\n"
+             << "  4. Dodaj Drapieznika (X)           9. Resetuj symulacje\n"
+             << "  5. Skanuj pole (x, y)             10. Pomoc / Briefing misji\n"
+             << "  0. Zakoncz misje\n";
 
         try {
-            wybor = wczytajLiczbe();
+            wybor = wczytajLiczbe("\nWybor: ");
+            int maxX = mars.getSzerokosc() - 1;
+            int maxY = mars.getWysokosc() - 1;
 
             if (wybor == 1) {
                 mars.wykonajTure();
             } else if (wybor == 2) {
-                for (int i = 0; i < 5; ++i) {
-                    mars.wykonajTure();
-                    mars.rysujPlansze("Trwa symulacja automatyczna (" + to_string(i + 1) + "/5)...");
-                    this_thread::sleep_for(chrono::milliseconds(450));
+                int liczbaSoli = wczytajLiczbe("Ile Soli zasymulowac [1-50]: ");
+                if (liczbaSoli < 1 || liczbaSoli > 50) {
+                    throw invalid_argument("Liczba Soli do animacji musi miescic sie w przedziale 1-50!");
                 }
-                komunikat = "Zakonczono cykl 5 Soli.";
+                for (int i = 0; i < liczbaSoli; ++i) {
+                    mars.wykonajTure();
+                    mars.rysujPlansze("Trwa symulacja automatyczna (" + to_string(i + 1) + "/" + to_string(liczbaSoli) + ")...");
+                    this_thread::sleep_for(chrono::milliseconds(400));
+                }
+                komunikat = "Zakonczono cykl " + to_string(liczbaSoli) + " Soli.";
             } else if (wybor == 3) {
-                cout << "Podaj energie, x, y: ";
-                int en = wczytajLiczbe();
-                int x = wczytajLiczbe();
-                int y = wczytajLiczbe();
+                int en = wczytajLiczbe("Podaj energie poczatkowa (> 0): ");
+                int x = wczytajLiczbe("Podaj wspolrzedna X [0-" + to_string(maxX) + "]: ");
+                int y = wczytajLiczbe("Podaj wspolrzedna Y [0-" + to_string(maxY) + "]: ");
                 mars.dodajOrganizm(make_unique<PorostMarsjanski>(en, Pozycja(x, y)));
-                komunikat = "Dodano Porost Marsjanski.";
+                komunikat = "Dodano Porost Marsjanski na polu (" + to_string(x) + ", " + to_string(y) + ").";
             } else if (wybor == 4) {
-                cout << "Podaj energie, x, y, zasieg ruchu (1-3): ";
-                int en = wczytajLiczbe();
-                int x = wczytajLiczbe();
-                int y = wczytajLiczbe();
-                int zasieg = wczytajLiczbe();
+                int en = wczytajLiczbe("Podaj energie poczatkowa (> 0): ");
+                int x = wczytajLiczbe("Podaj wspolrzedna X [0-" + to_string(maxX) + "]: ");
+                int y = wczytajLiczbe("Podaj wspolrzedna Y [0-" + to_string(maxY) + "]: ");
+                int zasieg = wczytajLiczbe("Podaj zasieg ruchu [1-3]: ");
                 mars.dodajOrganizm(make_unique<DrapieznikMarsjanski>(en, Pozycja(x, y), zasieg));
-                komunikat = "Dodano Drapieznika Marsjanskiego.";
+                komunikat = "Dodano Drapieznika Marsjanskiego na polu (" + to_string(x) + ", " + to_string(y) + ").";
             } else if (wybor == 5) {
-                cout << "Podaj wspolrzedne x, y: ";
-                int x = wczytajLiczbe();
-                int y = wczytajLiczbe();
+                int x = wczytajLiczbe("Podaj wspolrzedna X [0-" + to_string(maxX) + "]: ");
+                int y = wczytajLiczbe("Podaj wspolrzedna Y [0-" + to_string(maxY) + "]: ");
                 int idx = mars.znajdzOrganizm(x, y);
                 komunikat = mars.pobierzSzczegoly(idx);
             } else if (wybor == 6) {
-                cout << "Podaj x, y oraz nowa energie: ";
-                int x = wczytajLiczbe();
-                int y = wczytajLiczbe();
-                int en = wczytajLiczbe();
+                int x = wczytajLiczbe("Podaj wspolrzedna X [0-" + to_string(maxX) + "]: ");
+                int y = wczytajLiczbe("Podaj wspolrzedna Y [0-" + to_string(maxY) + "]: ");
+                int en = wczytajLiczbe("Podaj nowa wartosc energii (>= 0): ");
                 komunikat = mars.modyfikujEnergie(x, y, en)
                     ? "Zaktualizowano poziom energii."
                     : "Nie znaleziono organizmu na tych wspolrzednych.";
             } else if (wybor == 7) {
-                cout << "Podaj x, y organizmu do usuniecia: ";
-                int x = wczytajLiczbe();
-                int y = wczytajLiczbe();
+                int x = wczytajLiczbe("Podaj wspolrzedna X [0-" + to_string(maxX) + "]: ");
+                int y = wczytajLiczbe("Podaj wspolrzedna Y [0-" + to_string(maxY) + "]: ");
                 int idx = mars.znajdzOrganizm(x, y);
                 if (idx != -1) {
                     mars.usunOrganizm(idx);
@@ -126,6 +158,14 @@ int main() {
                 } else {
                     komunikat = "Brak organizmu na tym polu.";
                 }
+            } else if (wybor == 8) {
+                mars.wyswietlTabeleOrganizmow();
+                poczekajNaEnter(true);
+            } else if (wybor == 9) {
+                mars.resetuj();
+                komunikat = "Zresetowano symulacje do stanu poczatkowego (Sol 1).";
+            } else if (wybor == 10) {
+                pokazBriefing(true);
             } else if (wybor != 0) {
                 throw invalid_argument("Nieznana opcja menu: " + to_string(wybor));
             }
