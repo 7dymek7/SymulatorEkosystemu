@@ -38,6 +38,14 @@ classDiagram
         +operator<<(ostream os, Pozycja poz) ostream
     }
 
+    class OknoGraficzne {
+        -Srodowisko& srodowisko
+        +OknoGraficzne(Srodowisko& srod)
+        +uruchom() void
+    }
+
+    OknoGraficzne --> Srodowisko : asocjacja
+
     class Organizm {
         <<abstract>>
         -char symbol
@@ -116,7 +124,7 @@ Wymagany jest kompilator wspierający standard **C++17** (np. `g++` z pakietu Mi
 
 ### Kompilacja
 ```bash
-g++ -std=c++17 Pozycja.cpp Organizm.cpp PorostMarsjanski.cpp DrapieznikMarsjanski.cpp Srodowisko.cpp main.cpp -o symulator
+g++ -std=c++17 Pozycja.cpp Organizm.cpp PorostMarsjanski.cpp DrapieznikMarsjanski.cpp Srodowisko.cpp OknoGraficzne.cpp main.cpp -o symulator -lgdi32
 ```
 
 ### Uruchomienie

@@ -19,6 +19,7 @@
 #include "Srodowisko.h"
 #include "PorostMarsjanski.h"
 #include "DrapieznikMarsjanski.h"
+#include "OknoGraficzne.h"
 
 using namespace std;
 
@@ -74,7 +75,7 @@ void pokazBriefing(bool zMenu) {
          << "                          organizm na mapie (porownanie operatorem <).\n\n";
 
     cout << "\033[1;96mWSKAZOWKI:\033[0m\n"
-         << "  - Uzyj opcji [2], aby obejrzec plynna animacje wielu dni marsjanskich (Soli).\n"
+         << "  - Uzyj opcji [11], aby otworzyc natywne okno graficzne 2D z obsluga myszy.\n"
          << "  - Uzyj opcji [8], aby podejrzec tabele wszystkich organizmow i ich wspolrzedne.\n"
          << "  - Bledne wspolrzedne lub wartosci sa bezpiecznie obslugiwane przez wyjatki.\n";
 
@@ -90,7 +91,7 @@ int main() {
 
     pokazBriefing(false);
 
-    string komunikat = "Misja terraformacji Marsa rozpoczeta.";
+    string komunikat = "Misja terraformacji Marsa rozpoczeta. Wybierz [11], aby uruchomic okno 2D!";
     int wybor = -1;
 
     while (wybor != 0) {
@@ -98,12 +99,12 @@ int main() {
         komunikat.clear();
 
         cout << "\n\033[1;38;5;208m─── PANEL KONTROLNY ──────────────────────────────────────────────────────────\033[0m\n"
-             << "  1. Nastepny Sol (1 tura)           6. Modyfikuj energie organizmu\n"
-             << "  2. Animacja (wybrana liczba Soli)  7. Usun organizm z pola (x, y)\n"
-             << "  3. Dodaj Porost Marsjanski (*)     8. Raport sektora (tabela organizmow)\n"
-             << "  4. Dodaj Drapieznika (X)           9. Resetuj symulacje\n"
-             << "  5. Skanuj pole (x, y)             10. Pomoc / Briefing misji\n"
-             << "  0. Zakoncz misje\n";
+             << "  1. Nastepny Sol (1 tura)           7. Usun organizm z pola (x, y)\n"
+             << "  2. Animacja (wybrana liczba Soli)  8. Raport sektora (tabela organizmow)\n"
+             << "  3. Dodaj Porost Marsjanski (*)     9. Resetuj symulacje\n"
+             << "  4. Dodaj Drapieznika (X)          10. Pomoc / Briefing misji\n"
+             << "  5. Skanuj pole (x, y)             \033[1;96m11. Otworz okno graficzne 2D (Mars GUI)\033[0m\n"
+             << "  6. Modyfikuj energie organizmu     0. Zakoncz misje\n";
 
         try {
             wybor = wczytajLiczbe("\nWybor: ");
@@ -166,6 +167,10 @@ int main() {
                 komunikat = "Zresetowano symulacje do stanu poczatkowego (Sol 1).";
             } else if (wybor == 10) {
                 pokazBriefing(true);
+            } else if (wybor == 11) {
+                OknoGraficzne okno(mars);
+                okno.uruchom();
+                komunikat = "Zamknieto okno 2D i powrocono do konsoli (Sol " + to_string(mars.getSol()) + ").";
             } else if (wybor != 0) {
                 throw invalid_argument("Nieznana opcja menu: " + to_string(wybor));
             }
