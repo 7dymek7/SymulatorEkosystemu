@@ -1,28 +1,32 @@
 #include "PorostMarsjanski.h"
+#include <stdexcept>
 
 PorostMarsjanski::PorostMarsjanski()
-    : Organizm('P', 10, Pozycja(0, 0)), tempoWzrostu(2) {}
+    : Organizm('*', 8, Pozycja()), tempoFotosyntezy(2) {}
 
-PorostMarsjanski::PorostMarsjanski(Pozycja startPozycja, int startEnergia, int wzrost)
-    : Organizm('P', startEnergia, startPozycja), tempoWzrostu(wzrost) {}
-
-int PorostMarsjanski::getTempoWzrostu() const {
-    return tempoWzrostu;
-}
-
-void PorostMarsjanski::wykonajAkcje(int /*szerokosc*/, int /*wysokosc*/, bool burzaPylowa) {
-    // Porost nie przemieszcza sie; podczas burzy traci energie, w sloncu rosnie
-    if (burzaPylowa) {
-        zmienEnergie(-2);
-    } else {
-        zmienEnergie(tempoWzrostu);
+PorostMarsjanski::PorostMarsjanski(int startEnergia, Pozycja startPozycja, int tempo)
+    : Organizm('*', startEnergia, startPozycja), tempoFotosyntezy(tempo) {
+    if (tempo <= 0) {
+        throw invalid_argument("Tempo fotosyntezy musi byc dodatnie!");
     }
 }
 
-std::string PorostMarsjanski::getTyp() const {
+int PorostMarsjanski::getTempoFotosyntezy() const {
+    return tempoFotosyntezy;
+}
+
+void PorostMarsjanski::wykonajAkcje(int, int, bool burzaPylowa) {
+    if (burzaPylowa) {
+        zmienEnergie(1);
+    } else {
+        zmienEnergie(tempoFotosyntezy);
+    }
+}
+
+string PorostMarsjanski::getTyp() const {
     return "Porost Marsjanski";
 }
 
-std::string PorostMarsjanski::getKolorANSI() const {
-    return "\033[1;32m"; // Jasna zielen
+string PorostMarsjanski::getKolorANSI() const {
+    return "\033[1;92m";
 }

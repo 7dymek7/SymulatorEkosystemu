@@ -6,31 +6,37 @@
 #include <string>
 #include "Organizm.h"
 
+using namespace std;
+
 class Srodowisko {
 private:
     int szerokosc;
     int wysokosc;
-    int numerSola;
+    int sol;
+    int temperatura;
     bool burzaPylowa;
-    std::string ostatniKomunikat;
-    std::vector<std::unique_ptr<Organizm>> organizmy;
+    vector<unique_ptr<Organizm>> organizmy;
+    vector<string> logi;
+
+    void sprawdzWspolrzedne(int x, int y) const;
 
 public:
     Srodowisko();
     Srodowisko(int szer, int wys);
 
-    void dodajOrganizm(std::unique_ptr<Organizm> org);
+    int getSol() const;
+    int getTemperatura() const;
+    bool czyBurzaPylowa() const;
+    int getLiczbaOrganizmow() const;
+
+    void dodajOrganizm(unique_ptr<Organizm> org);
     void usunOrganizm(int indeks);
     int znajdzOrganizm(int x, int y) const;
     bool modyfikujEnergie(int x, int y, int nowaEnergia);
 
-    int policzTyp(const std::string& typ) const;
-    int getNumerSola() const;
-    bool czyBurzaPylowa() const;
-
     void wykonajTure();
-    void rysujPlansze() const;
-    std::string pobierzSzczegoly(int indeks) const;
+    string pobierzSzczegoly(int indeks) const;
+    void rysujPlansze(const string& komunikat = "") const;
 };
 
 #endif

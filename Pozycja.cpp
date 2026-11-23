@@ -7,3 +7,12 @@ int Pozycja::getX() const { return x; }
 int Pozycja::getY() const { return y; }
 void Pozycja::setX(int noweX) { x = noweX; }
 void Pozycja::setY(int noweY) { y = noweY; }
+
+bool Pozycja::operator==(const Pozycja& inna) const {
+    return x == inna.x && y == inna.y;
+}
+
+ostream& operator<<(ostream& os, const Pozycja& poz) {
+    os << "(" << poz.x << ", " << poz.y << ")";
+    return os;
+}

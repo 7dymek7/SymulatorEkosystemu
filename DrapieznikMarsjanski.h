@@ -1,5 +1,5 @@
-#ifndef DRAPIEZNIKMARSJANSKI_H
-#define DRAPIEZNIKMARSJANSKI_H
+#ifndef DRAPIEZNIK_MARSJANSKI_H
+#define DRAPIEZNIK_MARSJANSKI_H
 
 #include "Organizm.h"
 
@@ -9,13 +9,13 @@ private:
 
 public:
     DrapieznikMarsjanski();
-    DrapieznikMarsjanski(Pozycja startPozycja, int startEnergia = 16, int zasieg = 1);
+    DrapieznikMarsjanski(int startEnergia, Pozycja startPozycja, int zasieg = 1);
 
     int getZasiegRuchu() const;
 
     void wykonajAkcje(int szerokosc, int wysokosc, bool burzaPylowa) override;
-    std::string getTyp() const override;
-    std::string getKolorANSI() const override;
+    string getTyp() const override;
+    string getKolorANSI() const override;
 };
 
 #endif

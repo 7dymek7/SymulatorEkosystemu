@@ -1,39 +1,68 @@
 #include "Srodowisko.h"
 #include "PorostMarsjanski.h"
+#include "DrapieznikMarsjanski.h"
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <cstdlib>
+#include <algorithm>
+#include <stdexcept>
+
+using namespace std;
+
+namespace {
+    const string RESET = "\033[0m";
+    const string MARS_RAMKA = "\033[1;38;5;208m";
+    const string MARS_GLEBA = "\033[38;5;130m";
+    const string CYAN = "\033[1;96m";
+    const string CZERWONY = "\033[1;91m";
+    const string SZARY = "\033[90m";
+}
 
 Srodowisko::Srodowisko()
-    : szerokosc(16), wysokosc(10), numerSola(1), burzaPylowa(false),
-      ostatniKomunikat("Ladowanie w kraterze Jezero zakonczone.") {}
+    : szerokosc(12), wysokosc(8), sol(1), temperatura(-48), burzaPylowa(false) {}
 
 Srodowisko::Srodowisko(int szer, int wys)
-    : szerokosc(szer), wysokosc(wys), numerSola(1), burzaPylowa(false),
-      ostatniKomunikat("Ladowanie w kraterze Jezero zakonczone.") {}
-
-void Srodowisko::dodajOrganizm(std::unique_ptr<Organizm> org) {
-    int x = org->getPozycja().getX();
-    int y = org->getPozycja().getY();
-
-    if (x >= 0 && x < szerokosc && y >= 0 && y < wysokosc) {
-        ostatniKomunikat = "Dodano: " + org->getTyp() + " na polu (" +
-                           std::to_string(x) + ", " + std::to_string(y) + ").";
-        organizmy.push_back(std::move(org));
-    } else {
-        ostatniKomunikat = "Blad: wspolrzedne poza sektorem Marsa!";
+    : szerokosc(szer), wysokosc(wys), sol(1), temperatura(-48), burzaPylowa(false) {
+    if (szer <= 0 || wys <= 0) {
+        throw invalid_argument("Wymiary sektora Marsa musza byc dodatnie!");
     }
+}
+
+void Srodowisko::sprawdzWspolrzedne(int x, int y) const {
+    if (x < 0 || x >= szerokosc || y < 0 || y >= wysokosc) {
+        throw out_of_range("Wspolrzedne (" + to_string(x) + ", " + to_string(y) +
+                           ") wykraczaja poza sektor Marsa [0.." + to_string(szerokosc - 1) +
+                           ", 0.." + to_string(wysokosc - 1) + "]!");
+    }
+}
+
+int Srodowisko::getSol() const { return sol; }
+int Srodowisko::getTemperatura() const { return temperatura; }
+bool Srodowisko::czyBurzaPylowa() const { return burzaPylowa; }
+int Srodowisko::getLiczbaOrganizmow() const { return static_cast<int>(organizmy.size()); }
+
+void Srodowisko::dodajOrganizm(unique_ptr<Organizm> org) {
+    if (!org) {
+        throw invalid_argument("Proba dodania pustego wskaznika na organizm!");
+    }
+    sprawdzWspolrzedne(org->getPozycja().getX(), org->getPozycja().getY());
+    organizmy.push_back(move(org));
 }
 
 void Srodowisko::usunOrganizm(int indeks) {
-    if (indeks >= 0 && indeks < static_cast<int>(organizmy.size())) {
-        organizmy.erase(organizmy.begin() + indeks);
+    if (indeks < 0 || indeks >= static_cast<int>(organizmy.size())) {
+        throw out_of_range("Niepoprawny indeks organizmu do usuniecia!");
     }
+    organizmy.erase(organizmy.begin() + indeks);
 }
 
 int Srodowisko::znajdzOrganizm(int x, int y) const {
+    sprawdzWspolrzedne(x, y);
+    Pozycja cel(x, y);
     for (int i = 0; i < static_cast<int>(organizmy.size()); ++i) {
-        if (organizmy[i]->getPozycja().getX() == x &&
-            organizmy[i]->getPozycja().getY() == y) {
+        // Praktyczne wykorzystanie przeciazonego operatora ==
+        if (organizmy[i]->getPozycja() == cel) {
             return i;
         }
     }
@@ -41,107 +70,119 @@ int Srodowisko::znajdzOrganizm(int x, int y) const {
 }
 
 bool Srodowisko::modyfikujEnergie(int x, int y, int nowaEnergia) {
-    int indeks = znajdzOrganizm(x, y);
-    if (indeks == -1) {
-        return false;
+    sprawdzWspolrzedne(x, y);
+    if (nowaEnergia < 0) {
+        throw invalid_argument("Energia organizmu nie moze byc wartoscia ujemna!");
     }
+    int indeks = znajdzOrganizm(x, y);
+    if (indeks == -1) return false;
     organizmy[indeks]->setEnergia(nowaEnergia);
-    ostatniKomunikat = "Zmieniono energie organizmu (" + std::to_string(x) +
-                       ", " + std::to_string(y) + ") na " + std::to_string(nowaEnergia) + ".";
     return true;
 }
 
-int Srodowisko::policzTyp(const std::string& typ) const {
-    int licznik = 0;
-    for (const auto& org : organizmy) {
-        if (org->getTyp() == typ) {
-            licznik++;
-        }
-    }
-    return licznik;
-}
-
-int Srodowisko::getNumerSola() const { return numerSola; }
-bool Srodowisko::czyBurzaPylowa() const { return burzaPylowa; }
-
 void Srodowisko::wykonajTure() {
-    numerSola++;
-    burzaPylowa = (std::rand() % 4 == 0); // 25% szans na burze pylowa
+    ++sol;
+    temperatura = -65 + (rand() % 46);
+    burzaPylowa = (rand() % 4 == 0);
+    logi.clear();
 
     if (burzaPylowa) {
-        ostatniKomunikat = "ALARM! Burza pylowa na Marsie oslabia ekosystem!";
-    } else {
-        ostatniKomunikat = "Sloneczny Sol. Porosty fotosyntetyzuja w regolicie.";
+        logi.push_back("UWAGA: Nad sektorem przechodzi burza pylowa!");
     }
 
-    // 1. Polimorficzne wykonanie akcji kazdego organizmu
     for (auto& org : organizmy) {
         org->wykonajAkcje(szerokosc, wysokosc, burzaPylowa);
     }
 
-    // 2. Interakcje: drapieznik zjada porost na tym samym polu
     for (size_t i = 0; i < organizmy.size(); ++i) {
-        if (!organizmy[i]->czyZywy() || organizmy[i]->getTyp() != "Drapieznik Marsjanski") {
-            continue;
-        }
-        for (size_t j = 0; j < organizmy.size(); ++j) {
-            if (i == j || !organizmy[j]->czyZywy() || organizmy[j]->getTyp() != "Porost Marsjanski") {
-                continue;
-            }
-            if (organizmy[i]->getPozycja().getX() == organizmy[j]->getPozycja().getX() &&
-                organizmy[i]->getPozycja().getY() == organizmy[j]->getPozycja().getY()) {
-                organizmy[i]->zmienEnergie(8);
-                organizmy[j]->setEnergia(0);
-                ostatniKomunikat = "Drapieznik pochlonął Porost na polu (" +
-                                   std::to_string(organizmy[i]->getPozycja().getX()) + ", " +
-                                   std::to_string(organizmy[i]->getPozycja().getY()) + ")!";
-                break;
-            }
-        }
-    }
-
-    // 3. Rozrastanie sie silnych porostow (gdy nie ma burzy)
-    std::vector<std::unique_ptr<Organizm>> noweOrganizmy;
-    if (!burzaPylowa && organizmy.size() < 35) {
-        for (auto& org : organizmy) {
-            if (org->czyZywy() && org->getTyp() == "Porost Marsjanski" && org->getEnergia() >= 18) {
-                int nx = org->getPozycja().getX() + ((std::rand() % 3) - 1);
-                int ny = org->getPozycja().getY() + ((std::rand() % 3) - 1);
-
-                if (nx >= 0 && nx < szerokosc && ny >= 0 && ny < wysokosc && znajdzOrganizm(nx, ny) == -1) {
-                    org->zmienEnergie(-8);
-                    noweOrganizmy.push_back(std::make_unique<PorostMarsjanski>(Pozycja(nx, ny), 8, 2));
-                    ostatniKomunikat = "Porost marsjanski rozrosl sie na sasiedni sektor!";
+        if (organizmy[i]->getTyp() == "Drapieznik Marsjanski" && organizmy[i]->czyZywy()) {
+            for (size_t j = 0; j < organizmy.size(); ++j) {
+                if (i == j) continue;
+                if (organizmy[j]->getTyp() == "Porost Marsjanski" && organizmy[j]->czyZywy()) {
+                    // Wykorzystanie operatora == dla klasy Pozycja
+                    if (organizmy[i]->getPozycja() == organizmy[j]->getPozycja()) {
+                        organizmy[i]->zmienEnergie(organizmy[j]->getEnergia());
+                        organizmy[j]->setEnergia(0);
+                        ostringstream oss;
+                        oss << "Drapieznik pochlonol Porost na polu " << organizmy[i]->getPozycja() << ".";
+                        logi.push_back(oss.str());
+                    }
                 }
             }
         }
     }
 
+    vector<unique_ptr<Organizm>> noweOrganizmy;
+    for (auto& org : organizmy) {
+        if (org->getTyp() == "Porost Marsjanski" && org->getEnergia() >= 14) {
+            int nx = org->getPozycja().getX() + ((rand() % 3) - 1);
+            int ny = org->getPozycja().getY() + ((rand() % 3) - 1);
+            if (nx >= 0 && nx < szerokosc && ny >= 0 && ny < wysokosc && znajdzOrganizm(nx, ny) == -1) {
+                org->zmienEnergie(-7);
+                noweOrganizmy.push_back(make_unique<PorostMarsjanski>(6, Pozycja(nx, ny), 2));
+                logi.push_back("Porost rozrosl sie na pole (" +
+                    to_string(nx) + ", " + to_string(ny) + ").");
+            }
+        }
+    }
     for (auto& nowy : noweOrganizmy) {
-        organizmy.push_back(std::move(nowy));
+        organizmy.push_back(move(nowy));
     }
 
-    // 4. Usuwanie martwych organizmow
     for (int i = static_cast<int>(organizmy.size()) - 1; i >= 0; --i) {
         if (!organizmy[i]->czyZywy()) {
+            logi.push_back(organizmy[i]->getTyp() + " wyginal z braku energii.");
             usunOrganizm(i);
         }
     }
 }
 
-void Srodowisko::rysujPlansze() const {
-    const std::string RESET = "\033[0m";
-    const std::string MARS_RAMKA = "\033[1;31m";
-    const std::string MARS_PIASEK = burzaPylowa ? "\033[33m" : "\033[31m";
-    const std::string CYAN = "\033[1;36m";
-    const std::string ZIELONY = "\033[1;32m";
-    const std::string ZOLTY = "\033[1;33m";
+string Srodowisko::pobierzSzczegoly(int indeks) const {
+    if (indeks < 0 || indeks >= static_cast<int>(organizmy.size())) {
+        return "Brak organizmu na wskazanych wspolrzednych.";
+    }
+    // Praktyczne wykorzystanie przeciazonego operatora <<
+    ostringstream oss;
+    oss << "SKAN: " << *organizmy[indeks];
+    return oss.str();
+}
 
-    char tloZnak = burzaPylowa ? '~' : '.';
-    std::vector<std::vector<char>> siatka(wysokosc, std::vector<char>(szerokosc, tloZnak));
-    std::vector<std::vector<std::string>> kolory(wysokosc, std::vector<std::string>(szerokosc, MARS_PIASEK));
+void Srodowisko::rysujPlansze(const string& komunikat) const {
+    cout << "\033[2J\033[H";
 
-    // Najpierw porosty, potem drapiezniki (zeby drapiezniki byly zawsze widoczne na wierzchu)
+    int liczbaPorostow = 0;
+    int liczbaDrapieznikow = 0;
+    const Organizm* lider = nullptr;
+
+    for (const auto& org : organizmy) {
+        if (org->getTyp() == "Porost Marsjanski") ++liczbaPorostow;
+        else if (org->getTyp() == "Drapieznik Marsjanski") ++liczbaDrapieznikow;
+
+        // Praktyczne wykorzystanie przeciazonego operatora <
+        if (lider == nullptr || *lider < *org) {
+            lider = org.get();
+        }
+    }
+
+    cout << MARS_RAMKA << "╔══════════════════════════════════════════════════════╗\n";
+    cout << "║     SYMULATOR EKOSYSTEMU: SEKTOR KRATERU JEZERO      ║\n";
+    cout << "╚══════════════════════════════════════════════════════╝" << RESET << "\n";
+
+    cout << CYAN << " SOL: " << setw(3) << sol << RESET
+         << " | " << MARS_RAMKA << "TEMP: " << temperatura << " C" << RESET
+         << " | " << (burzaPylowa ? CZERWONY + "BURZA PYLOWA" : CYAN + "POGODA STABILNA") << RESET << "\n";
+    cout << " \033[1;92mPorost (*): " << liczbaPorostow << RESET
+         << " | \033[1;93mDrapiezniki (X): " << liczbaDrapieznikow << RESET << "\n";
+
+    if (lider != nullptr) {
+        // Praktyczne wykorzystanie przeciazonego operatora << bezposrednio na cout
+        cout << CYAN << " Lider: " << RESET << *lider << "\n";
+    }
+    cout << "\n";
+
+    vector<vector<char>> siatka(wysokosc, vector<char>(szerokosc, '.'));
+    vector<vector<string>> kolory(wysokosc, vector<string>(szerokosc, MARS_GLEBA));
+
     for (const auto& org : organizmy) {
         int x = org->getPozycja().getX();
         int y = org->getPozycja().getY();
@@ -149,51 +190,37 @@ void Srodowisko::rysujPlansze() const {
         kolory[y][x] = org->getKolorANSI();
     }
 
-    std::cout << "\033[2J\033[H"; // Wyczysc ekran i ustaw kursor na gorze
+    cout << SZARY << "    ";
+    for (int x = 0; x < szerokosc; ++x) {
+        cout << setw(3) << x;
+    }
+    cout << RESET << "\n";
 
-    // Naglowek HUD
-    std::cout << MARS_RAMKA << "╔══════════════════════════════════════════════════════╗\n";
-    std::cout << "║" << CYAN << "       SYMULATOR EKOSYSTEMU MARSA - KRATER JEZERO     " << MARS_RAMKA << "║\n";
-    std::cout << "╚══════════════════════════════════════════════════════╝" << RESET << "\n";
-
-    std::cout << "  SOL: " << CYAN << numerSola << RESET
-              << "  |  POGODA: "
-              << (burzaPylowa ? "\033[1;31mBURZA PYLOWA (-E)" : "\033[1;32mCZYSTE NIEBO (+E)")
-              << RESET << "\n";
-
-    std::cout << "  " << ZIELONY << "[P] Porosty: " << policzTyp("Porost Marsjanski") << RESET
-              << "   |   "
-              << ZOLTY << "[D] Drapiezniki: " << policzTyp("Drapieznik Marsjanski") << RESET
-              << "   |   Razem: " << organizmy.size() << "\n\n";
-
-    // Rysowanie mapy Marsa z ramka
-    std::cout << "  " << MARS_RAMKA << "╔";
-    for (int i = 0; i < szerokosc * 2 + 1; ++i) std::cout << "═";
-    std::cout << "╗" << RESET << "\n";
+    cout << MARS_RAMKA << "   ╔";
+    for (int i = 0; i < szerokosc * 3 + 1; ++i) cout << "═";
+    cout << "╗" << RESET << "\n";
 
     for (int y = 0; y < wysokosc; ++y) {
-        std::cout << "  " << MARS_RAMKA << "║ " << RESET;
+        cout << SZARY << setw(2) << y << " " << MARS_RAMKA << "║" << RESET;
         for (int x = 0; x < szerokosc; ++x) {
-            std::cout << kolory[y][x] << siatka[y][x] << " " << RESET;
+            cout << "  " << kolory[y][x] << siatka[y][x] << RESET;
         }
-        std::cout << MARS_RAMKA << "║" << RESET << " " << y << "\n";
+        cout << " " << MARS_RAMKA << "║" << RESET << "\n";
     }
 
-    std::cout << "  " << MARS_RAMKA << "╚";
-    for (int i = 0; i < szerokosc * 2 + 1; ++i) std::cout << "═";
-    std::cout << "╝" << RESET << "\n";
+    cout << MARS_RAMKA << "   ╚";
+    for (int i = 0; i < szerokosc * 3 + 1; ++i) cout << "═";
+    cout << "╝" << RESET << "\n";
 
-    // Pasek statusu wydarzen
-    std::cout << "\n  " << CYAN << "[LOG]: " << RESET << ostatniKomunikat << "\n";
-}
-
-std::string Srodowisko::pobierzSzczegoly(int indeks) const {
-    if (indeks >= 0 && indeks < static_cast<int>(organizmy.size())) {
-        const auto& org = organizmy[indeks];
-        return "Znaleziono: " + org->getTyp() + " [" + org->getSymbol() +
-               "] | Energia: " + std::to_string(org->getEnergia()) +
-               " | Pozycja: (" + std::to_string(org->getPozycja().getX()) +
-               ", " + std::to_string(org->getPozycja().getY()) + ")";
+    if (!logi.empty()) {
+        cout << CYAN << "\n[TELEMETRIA SOLA " << sol << "]" << RESET << "\n";
+        int limit = min(static_cast<int>(logi.size()), 4);
+        for (int i = 0; i < limit; ++i) {
+            cout << " > " << logi[i] << "\n";
+        }
     }
-    return "Brak organizmu na podanych wspolrzednych.";
+
+    if (!komunikat.empty()) {
+        cout << "\n" << CZERWONY << "[STATUS] " << RESET << komunikat << "\n";
+    }
 }

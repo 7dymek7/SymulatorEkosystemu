@@ -2,7 +2,10 @@
 #define ORGANIZM_H
 
 #include <string>
+#include <iostream>
 #include "Pozycja.h"
+
+using namespace std;
 
 class Organizm {
 private:
@@ -24,10 +27,12 @@ public:
     void setPozycja(Pozycja nowaPozycja);
     void zmienEnergie(int delta);
 
-    // Metody wirtualne realizujace polimorfizm (ocena 4.0)
     virtual void wykonajAkcje(int szerokosc, int wysokosc, bool burzaPylowa) = 0;
-    virtual std::string getTyp() const = 0;
-    virtual std::string getKolorANSI() const = 0;
+    virtual string getTyp() const = 0;
+    virtual string getKolorANSI() const = 0;
+
+    bool operator<(const Organizm& inny) const;
+    friend ostream& operator<<(ostream& os, const Organizm& org);
 };
 
 #endif
